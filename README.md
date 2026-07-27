@@ -1,5 +1,7 @@
 # iRacing Season Planner
 
+![iRacing Season Planner preview](image.png)
+
 A single-page, offline-first planner for iRacing's official season schedule. Point it at a season
 and it shows, for any date, every series racing that week — cross-referenced against the cars and
 tracks you actually own, so you can see at a glance what you can race *right now*.
