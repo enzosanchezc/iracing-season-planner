@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iRacing Season Planner</title>
+<style>
+  :root{
+    --ink:#14161a; --ink-2:#3d434d; --ink-3:#767d88;
+    --line:#dfe3e8; --line-2:#eceff2;
+    --bg:#f2f4f6; --card:#ffffff;
+    --own:#e2f3e6; --own-line:#7fc492; --own-ink:#1d6b34;
+    --accent:#0e4f8f; --accent-soft:#e7f0f9;
+    --warn:#b4531a;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--sans);-webkit-font-smoothing:antialiased}
+  button,input,select{font-family:inherit}
+  a{color:var(--accent)}
+
+  /* ---- top bar ---- */
+  .bar{position:sticky;top:0;z-index:40;background:#14161a;color:#fff;display:flex;align-items:center;
+       gap:18px;padding:0 18px;height:52px;border-bottom:1px solid #000}
+  .brand{font-weight:700;letter-spacing:-.2px;font-size:15px;white-space:nowrap}
+  .brand span{color:#8fb8e0;font-weight:500}
+  .bar .spacer{flex:1}
+  .savestate{font-size:11.5px;color:#8d949e;margin-right:4px;white-space:nowrap}
+  @media(max-width:760px){.savestate{display:none}}
+  .bar button{background:transparent;border:1px solid #33383f;color:#e7eaee;padding:6px 11px;border-radius:5px;
+              font-size:13px;cursor:pointer}
+  .bar button:hover{background:#22262c;border-color:#4a505a}
+  .bar button.primary{background:#1c5fa8;border-color:#1c5fa8;color:#fff}
+  .bar button.primary:hover{background:#2470c4}
+
+  /* ---- layout ---- */
+  .wrap{display:flex;align-items:flex-start;gap:16px;padding:16px;max-width:1900px;margin:0 auto}
+  .side{width:216px;flex:0 0 216px;position:sticky;top:68px}
+  .main{flex:1;min-width:0}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:8px}
+
+  /* ---- date head ---- */
+  .head{padding:14px 16px 12px}
+  .head-top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  h1{font-size:21px;margin:0;font-weight:650;letter-spacing:-.3px}
+  h1 em{font-style:normal;color:var(--accent)}
+  .wknum{margin-left:auto;font:600 15px/1 var(--mono);color:var(--ink-3)}
+  .nav{display:flex;align-items:center;gap:6px;margin-top:10px;flex-wrap:wrap}
+  .nav button{background:#fff;border:1px solid var(--line);border-radius:5px;padding:5px 9px;cursor:pointer;font-size:13px}
+  .nav button:hover{border-color:#b9c1cb;background:#f8fafc}
+  .nav input[type=date]{border:1px solid var(--line);border-radius:5px;padding:5px 8px;font-size:13px}
+
+  /* ---- season ribbon (signature) ---- */
+  .ribbon{display:flex;gap:3px;margin-top:12px}
+  .seg{flex:1;background:#eef1f4;border:1px solid transparent;border-radius:4px;padding:5px 3px 4px;
+       cursor:pointer;text-align:center;position:relative;overflow:hidden}
+  .seg:hover{border-color:#b9c1cb}
+  .seg .wk{font:600 10px/1 var(--mono);color:var(--ink-3);position:relative}
+  .seg .ct{font:700 14px/1.25 var(--mono);color:var(--ink-2);position:relative}
+  .seg .fill{position:absolute;left:0;right:0;bottom:0;background:var(--own);transition:height .18s ease}
+  .seg.on{border-color:var(--accent);background:var(--accent-soft)}
+  .seg.on .wk,.seg.on .ct{color:var(--accent)}
+  .ribbon-cap{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-3);margin-top:5px}
+
+  /* ---- filters ---- */
+  .side h2{font:600 11px/1 var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);
+           margin:0 0 9px}
+  .fgroup{padding:13px 14px;border-bottom:1px solid var(--line-2)}
+  .fgroup:last-child{border-bottom:0}
+  .opt{display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer;font-size:13px;color:var(--ink-2)}
+  .opt input{margin:0;accent-color:var(--accent);width:14px;height:14px}
+  .opt .tally{margin-left:auto;font:11px/1 var(--mono);color:var(--ink-3)}
+  .side .reset{width:100%;margin-top:2px;background:#fff;border:1px solid var(--line);border-radius:5px;
+               padding:7px;cursor:pointer;font-size:12.5px;color:var(--ink-2)}
+  .side .reset:hover{border-color:#b9c1cb}
+  .stat{padding:12px 14px;font-size:12.5px;color:var(--ink-3);border-bottom:1px solid var(--line-2)}
+  .stat b{display:block;font:700 22px/1.1 var(--sans);color:var(--own-ink)}
+  .stat .sub{color:var(--ink-3)}
+
+  /* ---- table ---- */
+  /* no overflow here: an overflow ancestor would re-anchor the sticky header to
+     this box instead of the viewport, and it would float over the first row */
+  .tablewrap{border-radius:8px}
+  table{border-collapse:collapse;width:100%;min-width:820px;font-size:13px;
+        border-radius:8px;overflow:hidden}
+  th{position:sticky;top:52px;z-index:10;background:#f7f9fa;text-align:left;font-weight:600;color:var(--ink-2);
+     padding:9px 10px;box-shadow:inset 0 -1px 0 var(--line);white-space:nowrap;font-size:12px;
+     letter-spacing:.02em;cursor:pointer;user-select:none}
+  thead::after{content:'';position:absolute}
+  th:hover{background:#eef2f5}
+  th .car{color:var(--ink-3);font-size:9px}
+  td{padding:7px 10px;border-bottom:1px solid var(--line-2);vertical-align:top}
+  tr.can td{background:#f6fcf7}
+  tr:hover td{background:#eef4fa}
+  td.tk.own,td.cr.own{background:var(--own);box-shadow:inset 2px 0 0 var(--own-line)}
+  tr.can td.tk.own,tr.can td.cr.own{background:var(--own)}
+  .badge{display:inline-block;min-width:19px;text-align:center;padding:2px 5px;border-radius:3px;
+         font:700 11px/1.35 var(--mono);color:#fff}
+  .b-R{background:#c0392b}.b-D{background:#e07000}.b-C{background:#e8c000;color:#3d2f00}
+  .b-B{background:#28903f}.b-A{background:#2f6fc0}.b-P{background:#2b2f36}
+  .lic{font:600 11.5px/1.35 var(--mono);color:var(--ink-2);background:#f0f2f5;border:1px solid var(--line);
+       padding:1px 5px;border-radius:3px;white-space:nowrap}
+  .ser{font:550 13px/1.45 var(--sans);color:var(--ink);background:none;border:0;padding:0;text-align:left;
+       cursor:pointer;border-bottom:1px dotted #b9c1cb}
+  .ser:hover{color:var(--accent);border-bottom-color:var(--accent)}
+  .tag{display:inline-block;font:600 9.5px/1.4 var(--mono);letter-spacing:.04em;padding:1px 4px;border-radius:3px;
+       border:1px solid var(--line);color:var(--ink-3);margin-left:5px;vertical-align:1px}
+  .tag.fx{border-color:#d6c39a;color:#8a6d24;background:#fdf7e6}
+  .tag.tm{border-color:#a8c4e0;color:#2f6fc0;background:#eef5fc}
+  .lay{color:var(--ink-3);font-size:12px}
+  .mono{font-family:var(--mono);font-size:12px;color:var(--ink-2);white-space:nowrap}
+  .times{color:var(--ink-3);font-size:12px}
+  td.nxt{white-space:nowrap}
+  td.nxt .cd{font:700 12.5px/1.4 var(--mono);color:var(--own-ink)}
+  td.nxt .clock{font:12px/1.4 var(--mono);color:var(--ink-3)}
+  td.nxt .ph{background:none;border:0;cursor:pointer;color:var(--warn);font:700 13px/1 var(--mono);padding:0 0 0 3px}
+  td.nxt .ph:hover{color:var(--ink)}
+  td.nxt .ph.set{color:var(--ink-3);opacity:.65}
+  td.nxt .ph.set:hover{color:var(--accent);opacity:1}
+  .star{background:none;border:0;cursor:pointer;color:#c9ced6;font-size:14px;padding:0 5px 0 0;line-height:1}
+  .star.on{color:#e2a800}
+  .cars{color:var(--ink-2)}
+  .cars .hit{color:var(--own-ink);font-weight:600}
+  .empty{padding:44px 20px;text-align:center;color:var(--ink-3)}
+  .empty b{display:block;color:var(--ink-2);font-size:15px;margin-bottom:4px}
+
+  /* ---- modal ---- */
+  .scrim{position:fixed;inset:0;background:rgba(16,19,23,.5);display:none;z-index:60;padding:32px 16px}
+  .scrim.open{display:block}
+  .modal{background:#fff;max-width:860px;margin:0 auto;border-radius:10px;display:flex;flex-direction:column;
+         max-height:calc(100vh - 64px);overflow:hidden}
+  .modal header{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+  .modal header h3{margin:0;font-size:16px}
+  .modal header .count{font:12px/1 var(--mono);color:var(--ink-3)}
+  .modal .tools{padding:10px 18px;border-bottom:1px solid var(--line-2);display:flex;gap:8px;flex-wrap:wrap}
+  .modal .tools input{flex:1;min-width:170px;border:1px solid var(--line);border-radius:5px;padding:7px 10px;font-size:13px}
+  .modal .tools button{border:1px solid var(--line);background:#fff;border-radius:5px;padding:6px 10px;
+                       font-size:12.5px;cursor:pointer;color:var(--ink-2)}
+  .modal .tools button:hover{border-color:#b9c1cb}
+  .list{overflow:auto;padding:8px 12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1px 10px}
+  .li{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:4px;cursor:pointer;font-size:13px}
+  .li:hover{background:#f3f6f9}
+  .li input{accent-color:var(--accent);margin:0;width:14px;height:14px}
+  .li .free{margin-left:auto;font:9.5px/1.4 var(--mono);color:#5a8a68;background:#eef7f0;border:1px solid #cfe6d5;
+            padding:0 4px;border-radius:3px}
+  .mtable{width:100%;border-collapse:collapse;font-size:13px}
+  .mtable th{position:static;background:#f7f9fa;font-size:11px;letter-spacing:.05em;text-transform:uppercase;
+             color:var(--ink-3);padding:7px 10px;border-bottom:1px solid var(--line);cursor:default}
+  .mtable td{padding:7px 10px;border-bottom:1px solid var(--line-2);vertical-align:top}
+  .mtable td.own{background:var(--own)}
+  .mtable tr.can td{background:var(--own)}
+  .mtable tr.now td{font-weight:650}
+  .mtable tr.now td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+  .mtable .num{font-family:var(--mono);font-size:12px;color:var(--ink-2);white-space:nowrap}
+  .cnt{display:inline-block;min-width:22px;text-align:center;font:700 13px/1.5 var(--mono);
+       background:var(--accent-soft);color:var(--accent);border-radius:4px;padding:0 6px}
+  .cnt.zero{background:#f0f2f5;color:var(--ink-3)}
+  .uses{font-size:12px;color:var(--ink-2)}
+  .uses .wkn{color:var(--ink-3);font-family:var(--mono);font-size:11px}
+  .uses .nc{color:var(--warn)}
+  .uses .gone{color:var(--ink-3);opacity:.6;text-decoration:line-through}
+  .uses .gone .wkn{text-decoration:line-through}
+  .modal .sub{padding:10px 18px;font-size:12.5px;color:var(--ink-3);border-bottom:1px solid var(--line-2)}
+  .modal footer{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center}
+  .modal footer .note{font-size:12px;color:var(--ink-3);flex:1}
+  .modal footer button{padding:8px 16px;border-radius:5px;border:1px solid var(--accent);background:var(--accent);
+                       color:#fff;cursor:pointer;font-size:13px}
+  textarea{width:100%;height:190px;font:11.5px/1.5 var(--mono);border:1px solid var(--line);border-radius:6px;padding:10px}
+  .ldbtn{border:1px solid var(--line);background:#fff;border-radius:5px;padding:6px 10px;font-size:12.5px;
+          cursor:pointer;color:var(--ink-2)}
+  .ldbtn:hover{border-color:#b9c1cb}
+  .warnbar{background:#fff6e6;border:1px solid #e6d3a8;color:#7a5a12;padding:8px 12px;border-radius:6px;
+           font-size:12.5px;margin:0 0 12px}
+  @media(max-width:1100px){
+    .bar{position:static;height:auto;flex-wrap:wrap;padding:8px 12px;gap:8px}
+    th{top:0}
+  }
+  @media(max-width:900px){
+    .wrap{flex-direction:column;padding:10px}
+    .side{position:static;width:100%;flex:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="brand">iRacing Season Planner <span>· schedule from season.json</span></div>
+  <div class="spacer"></div>
+  <span id="saveState" class="savestate"></span>
+  <button id="btnCars">My cars</button>
+  <button id="btnTracks">My tracks</button>
+  <button id="btnFavs">Favourites</button>
+  <button id="btnBuy">Purchase guide</button>
+  <button id="btnBackup">Backup</button>
+  <button class="primary" id="btnSaveCopy">Save a copy</button>
+</div>
+
+<div class="wrap">
+  <aside class="side">
+    <div class="panel">
+      <div class="stat">
+        <b id="statCan">0</b>
+        <span class="sub">series you can race on this date</span>
+      </div>
+      <div class="fgroup">
+        <h2>Discipline</h2>
+        <div id="fType"></div>
+      </div>
+      <div class="fgroup">
+        <h2>Licence</h2>
+        <div id="fClass"></div>
+      </div>
+      <div class="fgroup">
+        <h2>Setup</h2>
+        <label class="opt"><input type="checkbox" id="fOpen" checked> Open setup</label>
+        <label class="opt"><input type="checkbox" id="fFixed" checked> Fixed setup</label>
+      </div>
+      <div class="fgroup">
+        <h2>Content</h2>
+        <label class="opt"><input type="checkbox" id="fCan"> Can race now</label>
+        <label class="opt"><input type="checkbox" id="fCar"> Have the car</label>
+        <label class="opt"><input type="checkbox" id="fTrk"> Have the track</label>
+        <label class="opt"><input type="checkbox" id="fNear"> One track away</label>
+        <label class="opt"><input type="checkbox" id="fFav"> Favourites only</label>
+        <label class="opt"><input type="checkbox" id="fSoon"> Starting within the hour</label>
+      </div>
+      <div class="fgroup">
+        <button class="reset" id="btnReset">Reset filters</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="panel head">
+      <div class="head-top">
+        <h1>Races for <em id="dateLabel">—</em></h1>
+        <div class="wknum" id="weekLabel"></div>
+      </div>
+      <div class="nav">
+        <button id="prevWk">◀ Week</button>
+        <button id="prevDay">◀ Day</button>
+        <input type="date" id="dateIn">
+        <button id="nextDay">Day ▶</button>
+        <button id="nextWk">Week ▶</button>
+        <button id="todayBtn">Today</button>
+      </div>
+      <div class="ribbon" id="ribbon"></div>
+      <div class="ribbon-cap">
+        <span id="capL"></span>
+        <span>bar height = share of that week's grid you can race</span>
+        <span id="capR"></span>
+      </div>
+    </div>
+
+    <div class="panel tablewrap" style="margin-top:14px">
+      <table id="tbl">
+        <thead><tr>
+          <th data-k="cls">Class</th>
+          <th data-k="lic">Licence</th>
+          <th data-k="type">Discipline</th>
+          <th data-k="ser">Series</th>
+          <th data-k="trk">Track</th>
+          <th data-k="car">Car</th>
+          <th data-k="wk">Week</th>
+          <th data-k="len">Length</th>
+          <th data-k="next">Next race</th>
+          <th data-k="times">Race times</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty" id="empty" style="display:none"><b>Nothing matches</b>Loosen a filter, or pick another date.</div>
+    </div>
+    <p style="font-size:12px;color:var(--ink-3);margin:10px 2px 0">
+      Next race is worked out from the cadence the schedule publishes, in GMT, and shown in your local time.
+      <b>~</b> means the schedule states the interval but not whether it lands on odd or even hours — click it to flip.
+      No registration numbers or splits here: those only exist behind an iRacing login.
+    </p>
+    <p class="footnote" style="font-size:12px;color:var(--ink-3);margin:8px 2px 30px">
+      Built from the iRacing season schedule PDF (schedule from season.json, generated —). 0 series ·
+      0 series-weeks · 0 cars · 0 tracks. Track ownership is per base track — every layout counts.
+    </p>
+  </main>
+</div>
+
+<div class="scrim" id="scrim">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script>
+const BUILD = '2026-07-27.20';
+const EMBEDDED = {"built":"—","season":"no schedule loaded","cars":[],"tracks":[],"series":[],"rows":[],"freeCars":[],"freeTracks":[]};
+let DATA = window.__SEASON__ || EMBEDDED;
+const $ = s => document.querySelector(s);
+const ESC_MAP = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ESC_MAP[c]);
+const SHELL_HTML = $('.main').innerHTML;
+const CLS_ORDER = {A:0,B:1,C:2,D:3,R:4,P:0};
+const CLASSES = ['A','B','C','D','R'];
+let TYPES=[], SEASON_START='', SEASON_WEEKS=12, weekStarts=[];
+let seasonSource='built into this file';
+
+/* ---------- state ---------- */
+const state = {
+  date: null,
+  cars: new Set(),
+  tracks: new Set(),
+  favs: new Set(),
+  types: new Set(TYPES),
+  classes: new Set(CLASSES),
+  open:true, fixed:true,
+  can:false, car:false, trk:false, near:false, fav:false, soon:false,
+  phase:{},
+  sort:{k:'cls',dir:1}
+};
+let backend = null;   /* chosen at boot: folder | browser | none */
+
+/* iRacing names the *season instance*, not the series: "iRacing Porsche Cup by CONSPIT - 2026 Season 3".
+   seriesKey drops the season part and is what favourites are stored under, so they survive a season swap.
+   seriesLabel also drops a trailing "Fixed" because the table shows that as a badge. */
+const SEASON_SUFFIX = /\s*[-\u2013]?\s*\b20\d{2}\b\s*[-\u2013]?\s*Season\b(\s*\d+)?/ig;
+const seriesKey = n => (n.replace(SEASON_SUFFIX,'').replace(/\s{2,}/g,' ')
+                         .replace(/(\s*[-\u2013]?\s*Fixed)(\s*[-\u2013]?\s*Fixed)+$/i,'$1')
+                         .replace(/\s*[-\u2013]\s*$/,'').trim() || n);
+const seriesLabel = n => { const k = seriesKey(n);
+  return k.replace(/\s*[-\u2013]?\s*Fixed$/i,'').trim() || k; };
+
+/* Parse the schedule's race-cadence text into something we can count down to.
+   Everything iRacing publishes here is GMT. */
+const DAYS = {sun:0,mon:1,tue:2,tues:2,wed:3,weds:3,wedns:3,thu:4,thur:4,thurs:4,fri:5,sat:6};
+const DAY_RE = /\b(sun|mon|tues?|weds?|thur?s?|fri|sat)(?:urday|day|nesday|rsday|riday|onday|esday)?s?\b/gi;
+
+function parseCadence(raw){
+  if(!raw) return {type:'unknown'};
+  let t = raw.split('|')[0].toLowerCase();           // "… | Qualifying every hour at :30"
+  if(/timeslots?\s+per\s+(race\s*)?week/.test(t) || /^\s*(four|five|\d+)\s+timeslots/.test(t))
+    return {type:'unknown', note:'times not published'};
+
+  if(DAY_RE.test(t)){
+    DAY_RE.lastIndex = 0;
+    const marks = [];
+    let m;
+    while((m = DAY_RE.exec(t))) marks.push({d: DAYS[m[1].toLowerCase().replace(/s$/,'')] ?? DAYS[m[1].toLowerCase()], i: m.index, end: m.index+m[0].length});
+    const groups = [];
+    let pending = [];
+    for(let k=0;k<marks.length;k++){
+      const seg = t.slice(marks[k].end, k+1<marks.length ? marks[k+1].i : t.length);
+      const hours = [...seg.matchAll(/(\d{1,2})(?::(\d{2}))?/g)]
+        .map(x=>({h:+x[1], mi:+(x[2]||0)}))
+        .filter(x=>x.h<=23);
+      if(hours.length){                                  // "Thur & Sat at 10, 19 GMT"
+        groups.push({days:[...pending, marks[k].d], hours});
+        pending = [];
+      }else{
+        pending.push(marks[k].d);
+      }
+    }
+    const clean = groups.filter(g=>g.hours.length);
+    if(clean.length) return {type:'weekly', groups:clean, biweekly:/every other/.test(t)};
+  }
+
+  const mins = [...t.matchAll(/:(\d{2})/g)].map(x=>+x[1]);
+  const bare = [...t.matchAll(/\b(\d{1,2})\s*past\b/g)].map(x=>+x[1]);
+  let minutes = [...new Set([...mins, ...bare])].filter(x=>x<60);
+  if(/on the hour|top of the hour|on the 00/.test(t)) minutes.push(0);
+  if(/half past/.test(t)) minutes.push(30);
+  minutes = [...new Set(minutes)].sort((a,b)=>a-b);
+
+  const half = /every (30|thirty) minutes?/.test(t);
+  if(half){
+    if(!minutes.length) minutes = [0,30];
+    if(minutes.length===1) minutes = [minutes[0], (minutes[0]+30)%60].sort((a,b)=>a-b);  // "at :00 & 30"
+    return {type:'interval', everyHours:1, minutes, parity:null, exact:true};
+  }
+  const two = /every (other )?2 hours|every (odd|even) 2 hours|every 2 hours|past every 2 hours/.test(t);
+  if(two){
+    if(!minutes.length) minutes=[0];
+    const parity = /odd/.test(t) ? 1 : /even/.test(t) ? 0 : null;
+    return {type:'interval', everyHours:2, minutes, parity,
+            stated: parity!==null, exact: parity!==null};
+  }
+  if(/hour/.test(t)){
+    if(!minutes.length) minutes=[0];
+    return {type:'interval', everyHours:1, minutes, parity:null, exact:true};
+  }
+  if(minutes.length) return {type:'interval', everyHours:1, minutes, parity:null, exact:true};
+  return {type:'unknown'};
+}
+
+/* next start at or after `from` (a Date), searching a fortnight ahead */
+function nextStart(spec, from){
+  if(!spec || spec.type==='unknown') return null;
+  const d = new Date(from.getTime());
+  d.setUTCSeconds(0,0);
+  if(spec.type==='interval'){
+    for(let step=0; step<24*14; step++){
+      const h = new Date(d.getTime() + step*3600000);
+      if(spec.everyHours===2){
+        const par = spec.parity===null ? 0 : spec.parity;
+        if(h.getUTCHours()%2 !== par) continue;
+      }
+      for(const mi of spec.minutes){
+        const c = new Date(Date.UTC(h.getUTCFullYear(),h.getUTCMonth(),h.getUTCDate(),h.getUTCHours(),mi));
+        if(c >= from) return c;
+      }
+    }
+    return null;
+  }
+  for(let day=0; day<15; day++){
+    const base = new Date(d.getTime() + day*86400000);
+    for(const g of spec.groups){
+      if(!g.days.includes(base.getUTCDay())) continue;
+      for(const t of g.hours){
+        const c = new Date(Date.UTC(base.getUTCFullYear(),base.getUTCMonth(),base.getUTCDate(),t.h,t.mi));
+        if(c >= from) return c;
+      }
+    }
+  }
+  return null;
+}
+
+const iso = d => d.toISOString().slice(0,10);
+const parse = s => new Date(s+'T00:00:00Z');
+const shift = (s,n) => { const d=parse(s); d.setUTCDate(d.getUTCDate()+n); return iso(d); };
+const pretty = s => parse(s).toLocaleDateString(undefined,{weekday:'short',year:'numeric',month:'long',day:'numeric',timeZone:'UTC'});
+
+/* season bounds: the calendar most series follow */
+function initSeason(){
+  if(!DATA || !DATA.rows || !DATA.rows.length){
+    TYPES=[]; weekStarts=[];
+    document.title = 'iRacing Season Planner' + (DATA && DATA.season ? ' — '+DATA.season : '');
+    return;
+  }
+  TYPES = [...new Set(DATA.series.map(s=>s.t))];
+  const startTally = {};
+  DATA.rows.filter(r=>r.w===1).forEach(r=>startTally[r.a]=(startTally[r.a]||0)+1);
+  SEASON_START = Object.keys(startTally).sort((a,b)=>startTally[b]-startTally[a])[0];
+  const mainSeries = new Set();
+  DATA.rows.forEach(r=>{ if(r.w===1 && r.a===SEASON_START) mainSeries.add(r.s); });
+  const lastWk = {};
+  DATA.rows.forEach(r=>{ if(mainSeries.has(r.s)) lastWk[r.s]=Math.max(lastWk[r.s]||0,r.w); });
+  const wkTally = {};
+  Object.values(lastWk).forEach(v=>wkTally[v]=(wkTally[v]||0)+1);
+  SEASON_WEEKS = +Object.keys(wkTally).sort((a,b)=>wkTally[b]-wkTally[a])[0] || 12;
+  weekStarts = Array.from({length:SEASON_WEEKS},(_,i)=>shift(SEASON_START,i*7));
+  document.title = 'iRacing Season Planner — '+DATA.season;
+  document.querySelector('.brand span').textContent = '· '+DATA.season;
+  document.querySelectorAll('.footnote').forEach(el=>{
+    el.textContent = `Built from the iRacing season schedule PDF (${DATA.season}, generated ${DATA.built}). `
+      + `${DATA.series.length} series · ${DATA.rows.length} series-weeks · ${DATA.cars.length} cars · `
+      + `${DATA.tracks.length} tracks. Track ownership is per base track — every layout counts. `
+      + `Schedule ${seasonSource} · app build ${BUILD}.`;
+  });
+}
+
+/* ---------- persistence ---------- */
+const KEY = 'iracing-season-planner-v1';
+/* match on the season-free name, but accept an old full-name entry too */
+function findSeries(name){
+  const k = seriesKey(name);
+  let i = DATA.series.findIndex(s=>seriesKey(s.n)===k);
+  if(i<0) i = DATA.series.findIndex(s=>s.n===name);
+  return i;
+}
+function snapshot(){
+  return {
+    cars:[...state.cars].map(i=>DATA.cars[i]).sort(),
+    tracks:[...state.tracks].map(i=>DATA.tracks[i]).sort(),
+    favs:[...state.favs].map(i=>seriesKey(DATA.series[i].n)).sort(),
+    filters:{types:[...state.types],classes:[...state.classes],open:state.open,fixed:state.fixed,
+             can:state.can,car:state.car,trk:state.trk,near:state.near,fav:state.fav,soon:state.soon},
+    phase:state.phase
+  };
+}
+function restore(o){
+  if(!o) return;
+  if(o.cars){ state.cars = new Set(o.cars.map(n=>DATA.cars.indexOf(n)).filter(i=>i>=0)); }
+  if(o.tracks){ state.tracks = new Set(o.tracks.map(n=>DATA.tracks.indexOf(n)).filter(i=>i>=0)); }
+  if(o.favs){ state.favs = new Set(o.favs.map(findSeries).filter(i=>i>=0)); }
+  if(o.phase && typeof o.phase === 'object'){ state.phase = {...o.phase}; specCache.clear(); }
+  const f=o.filters;
+  if(f){
+    if(f.types) state.types=new Set(f.types);
+    if(f.classes) state.classes=new Set(f.classes);
+    ['open','fixed','can','car','trk','near','fav','soon'].forEach(k=>{ if(k in f) state[k]=!!f[k]; });
+  }
+}
+function loadSeason(next){
+  const prev = DATA, prevLoaded = seasonLoaded;
+  const carNames=[...state.cars].map(i=>DATA.cars[i]);
+  const trkNames=[...state.tracks].map(i=>DATA.tracks[i]);
+  const favNames=[...state.favs].map(i=>seriesKey(DATA.series[i].n));
+  const keepSrc = seasonSource;
+  DATA = next; seasonLoaded = true; seasonSource = 'loaded by you';
+  try{
+    initSeason();
+    if(!weekStarts.length || weekStarts.some(d=>isNaN(parse(d)))) throw new Error('unreadable week dates');
+  }catch(err){
+    DATA = prev; seasonLoaded = prevLoaded; seasonSource = keepSrc; initSeason();
+    state.cars = new Set(carNames.map(n=>DATA.cars.indexOf(n)).filter(i=>i>=0));
+    state.tracks = new Set(trkNames.map(n=>DATA.tracks.indexOf(n)).filter(i=>i>=0));
+    state.favs = new Set(favNames.map(findSeries).filter(i=>i>=0));
+    render();
+    return 'That season file is not usable (' + err.message + '), so nothing changed.';
+  }
+  state.cars = new Set(carNames.map(n=>DATA.cars.indexOf(n)).filter(i=>i>=0));
+  state.tracks = new Set(trkNames.map(n=>DATA.tracks.indexOf(n)).filter(i=>i>=0));
+  state.favs = new Set(favNames.map(findSeries).filter(i=>i>=0));
+  TYPES.forEach(t=>state.types.add(t));
+  const today = iso(new Date());
+  state.date = (today>=weekStarts[0] && today<=shift(weekStarts[weekStarts.length-1],6))
+    ? today : weekStarts[0];
+  renderFilters(); render(); save();
+  return '';
+}
+let seasonLoaded = !!window.__SEASON__;
+/* Persistence has three homes, tried in this order:
+   folder   – planner-settings.json next to this file, via serve.py (syncs with the folder)
+   browser  – localStorage, when the page has a real origin (http:// or a file:// that allows it)
+   none     – nothing writable; the file itself is the save format via "Save a copy"        */
+const BACKENDS = {
+  folder: {
+    label: 'Saving to planner-settings.json in this folder',
+    ok: async () => { try{
+      const r = await fetch('planner-api', {cache:'no-store'});
+      if(!r.ok) return false;
+      const j = await r.json();
+      if(!j || !j.ok) return false;
+      BACKENDS.folder._seed = j.settings || null;
+      return true;
+    }catch(e){ return false; } },
+    get: async () => BACKENDS.folder._seed,
+    set: async v => { const r = await fetch('planner-api', {method:'PUT',
+      headers:{'Content-Type':'application/json'}, body: JSON.stringify(v)});
+      if(!r.ok) throw new Error('write failed'); },
+  },
+  browser: {
+    label: 'Saving in this browser',
+    ok: async () => { try{ localStorage.setItem(KEY+':ping','1');
+      localStorage.removeItem(KEY+':ping'); return true; }catch(e){ return false; } },
+    get: async () => { try{ const v = localStorage.getItem(KEY);
+      return v ? JSON.parse(v) : null; }catch(e){ return null; } },
+    set: async v => localStorage.setItem(KEY, JSON.stringify(v)),
+  },
+  none: {
+    label: 'Not saving on its own',
+    ok: async () => true, get: async () => null, set: async () => { throw new Error('no store'); },
+  },
+};
+
+/* One write per burst of clicking, and none at all if nothing actually changed:
+   in a synced folder every write costs an upload. */
+let saveTimer=null, saveFailed=false, lastSaved=null;
+function save(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async ()=>{
+    if(!backend || backend===BACKENDS.none) return;
+    const snap = snapshot(), text = JSON.stringify(snap);
+    if(text === lastSaved) return;
+    try{ await backend.set(snap); lastSaved = text; flagSave(true); }
+    catch(e){ flagSave(false); }
+  },1200);
+}
+function flagSave(ok){
+  saveFailed = !ok;
+  const el = document.querySelector('#saveState');
+  if(el) el.textContent = ok ? backend.label : 'Could not save — use "Save a copy"';
+}
+async function chooseBackend(){
+  for(const name of ['folder','browser']){
+    if(await BACKENDS[name].ok()){ backend = BACKENDS[name]; return; }
+  }
+  backend = BACKENDS.none;
+}
+/* a season.json sitting beside this file always wins — drop in a new one each season.
+   Decodes whatever the shell wrote: PowerShell's "> file" makes UTF-16LE, and plenty of
+   editors add a UTF-8 BOM. Both break a naive JSON.parse. */
+let seasonProblem = '';
+function decodeJSONBytes(buf){
+  const b = new Uint8Array(buf);
+  let enc = 'utf-8';
+  if(b[0]===0xFF && b[1]===0xFE) enc = 'utf-16le';
+  else if(b[0]===0xFE && b[1]===0xFF) enc = 'utf-16be';
+  else if(b.length>1 && b[0]!==0 && b[1]===0) enc = 'utf-16le';   // no BOM, but clearly UTF-16
+  let txt = new TextDecoder(enc).decode(b).replace(/^\uFEFF/,'');
+  return {txt, enc};
+}
+async function seasonFromFolder(){
+  let r;
+  try{ r = await fetch('season.json', {cache:'no-store'}); }
+  catch(e){ return null; }                       // file:// or no server — nothing to read
+  if(!r.ok) return null;                         // simply not there
+  let parsed, enc;
+  try{
+    const d = decodeJSONBytes(await r.arrayBuffer());
+    enc = d.enc;
+    parsed = JSON.parse(d.txt);
+  }catch(e){
+    seasonProblem = 'season.json is in this folder but could not be read (' + e.message + '). '
+      + 'If you made it with PowerShell\u2019s ">" redirect, run '
+      + '"python season_to_json.py SeasonSchedule.pdf -o season.json" instead.';
+    return null;
+  }
+  if(!parsed || !Array.isArray(parsed.rows) || !Array.isArray(parsed.series) || !parsed.rows.length){
+    seasonProblem = 'season.json is in this folder but has no schedule in it. '
+      + 'Re-run season_to_json.py and check it prints a "152 series" style summary.';
+    return null;
+  }
+  if(enc !== 'utf-8') seasonProblem = '';
+  return parsed;
+}
+async function loadSaved(){
+  const saved = await backend.get();
+  if(saved){ restore(saved); return true; }
+  return false;
+}
+
+/* write a fresh copy of this page with the current picks baked into it */
+function buildCopy(){
+  const clone = document.documentElement.cloneNode(true);
+  clone.querySelector('#tbody').innerHTML='';
+  clone.querySelector('#ribbon').innerHTML='';
+  clone.querySelectorAll('.warnbar').forEach(n=>n.remove());   // the copy re-adds its own
+  const old = clone.querySelector('#baked'); if(old) old.remove();
+  const sc = document.createElement('script');
+  sc.id='baked';
+  const enc = o => JSON.stringify(o).replace(/</g,'\\u003c');
+  sc.textContent = 'window.__SAVED__='+enc(snapshot())+';'
+    + (seasonLoaded ? 'window.__SEASON__='+enc(DATA)+';' : '');
+  clone.querySelector('head').appendChild(sc);
+  return '<!DOCTYPE html>\n'+clone.outerHTML;
+}
+function saveCopy(){
+  try{
+    const blob = new Blob([buildCopy()],{type:'text/html'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'iracing-season-planner.html';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  }catch(e){
+    backup();                                   // fall back to the copy-paste route
+    const c = $('#modal .count');
+    if(c) c.textContent = 'This browser blocked the download — copy the text below instead';
+  }
+}
+
+/* ---------- derived ---------- */
+const specCache = new Map();
+function cadenceFor(si){
+  if(!specCache.has(si)){
+    const spec = parseCadence(DATA.series[si].r);
+    const key = seriesKey(DATA.series[si].n);
+    if(spec.type==='interval' && spec.everyHours===2 && !spec.stated && key in state.phase){
+      spec.parity = state.phase[key]; spec.exact = true; spec.userPhase = true;
+    }
+    specCache.set(si, spec);
+  }
+  return specCache.get(si);
+}
+function nextForRow(r, now){
+  const today = iso(now);
+  if(!(r.a <= today && today < r.b)) return null;          // that week isn't live
+  const spec = cadenceFor(r.s);
+  if(!spec || spec.type==='unknown') return null;
+  const nx = nextStart(spec, now);
+  if(!nx || nx >= parse(r.b)) return null;                 // slot belongs to the next week's track
+  return nx;
+}
+/* module scope on purpose: both the top nav and the season ribbon call this */
+function setDate(d){ state.date = d; render(); }
+const rowsOn = date => DATA.rows.filter(r => r.a <= date && date < r.b);
+const ownsTrack = r => state.tracks.has(r.t);
+const ownsCar = r => r.c.length>0 && r.c.some(c=>state.cars.has(c));
+const canRace = r => ownsTrack(r) && ownsCar(r);
+
+function passes(r){
+  const s = DATA.series[r.s];
+  if(!state.types.has(s.t)) return false;
+  if(!state.classes.has(s.c)) return false;
+  if(s.f ? !state.fixed : !state.open) return false;
+  if(state.fav && !state.favs.has(r.s)) return false;
+  const oc=ownsCar(r), ot=ownsTrack(r);
+  if(state.can && !(oc&&ot)) return false;
+  if(state.car && !oc) return false;
+  if(state.trk && !ot) return false;
+  if(state.near && !(oc&&!ot)) return false;
+  if(state.soon){
+    const nx = nextMap.get(r);
+    if(!nx || nx - Date.now() > 3600000) return false;
+  }
+  return true;
+}
+
+/* ---------- render ---------- */
+function renderFilters(){
+  $('#fType').innerHTML = TYPES.map(t=>
+    `<label class="opt"><input type="checkbox" data-type="${t}" ${state.types.has(t)?'checked':''}> ${t}</label>`).join('');
+  $('#fClass').innerHTML = CLASSES.map(c=>
+    `<label class="opt"><input type="checkbox" data-class="${c}" ${state.classes.has(c)?'checked':''}>
+      <span class="badge b-${c}">${c}</span></label>`).join('');
+  $('#fType').onchange = e => { const t=e.target.dataset.type;
+    e.target.checked?state.types.add(t):state.types.delete(t); render(); save(); };
+  $('#fClass').onchange = e => { const c=e.target.dataset.class;
+    e.target.checked?state.classes.add(c):state.classes.delete(c); render(); save(); };
+  const bind=(id,key)=>{ const el=$(id); el.checked=state[key];
+    el.onchange=()=>{ state[key]=el.checked; render(); save(); }; };
+  bind('#fOpen','open'); bind('#fFixed','fixed'); bind('#fCan','can');
+  bind('#fCar','car'); bind('#fTrk','trk'); bind('#fNear','near'); bind('#fFav','fav');
+  bind('#fSoon','soon');
+}
+
+function renderRibbon(){
+  const rib = $('#ribbon');
+  rib.innerHTML = weekStarts.map((ws,i)=>{
+    const mid = shift(ws,3);
+    const rs = rowsOn(mid);
+    const n = rs.filter(canRace).length;
+    const pct = rs.length ? Math.round(n/rs.length*100) : 0;
+    const on = state.date >= ws && state.date < shift(ws,7);
+    return `<div class="seg ${on?'on':''}" data-ws="${ws}" title="Week ${i+1} · from ${ws} · ${n} of ${rs.length} raceable">
+      <div class="fill" style="height:${n?Math.max(pct,4):0}%"></div>
+      <div class="wk">W${i+1}</div><div class="ct">${n}</div></div>`;
+  }).join('');
+  rib.onclick = e => { const seg=e.target.closest('.seg'); if(!seg) return; setDate(seg.dataset.ws); };
+  $('#capL').textContent = 'Season starts '+weekStarts[0];
+  $('#capR').textContent = 'ends '+shift(weekStarts[weekStarts.length-1],6);
+}
+
+function carCell(r){
+  const names = r.c.map(c=>({n:DATA.cars[c],own:state.cars.has(c)}));
+  if(!names.length) return '<span class="lay">see series</span>';
+  const owned = names.filter(x=>x.own);
+  if(names.length===1) return `<span class="${owned.length?'hit':''}">${esc(names[0].n)}</span>`;
+  const head = (owned.length?owned:names).slice(0,2).map(x=>
+    `<span class="${x.own?'hit':''}">${esc(x.n)}</span>`).join(', ');
+  const rest = names.length - Math.min(2,(owned.length||names.length));
+  return head + (rest>0 ? ` <span class="lay">+${rest} more</span>` : '');
+}
+
+const pad = n => String(n).padStart(2,'0');
+function fmtLeft(ms){
+  if(ms < 0) return 'now';
+  const s = Math.floor(ms/1000);
+  if(s < 60) return s+'s';
+  const m = Math.floor(s/60);
+  if(m < 60) return m+'m';
+  return Math.floor(m/60)+'h '+pad(m%60)+'m';
+}
+function nextCell(r){
+  const nx = nextMap.get(r);
+  const spec = cadenceFor(r.s);
+  if(!nx){
+    const why = (!spec || spec.type==='unknown') ? 'times not published' : '—';
+    return `<td class="nxt"><span class="lay">${why}</span></td>`;
+  }
+  const flippable = spec.type==='interval' && spec.everyHours===2 && !spec.stated;
+  const pinned = flippable && spec.userPhase;
+  const hours = pinned ? (spec.parity===1 ? 'odd' : 'even') : 'even (assumed)';
+  const clock = pad(nx.getHours())+':'+pad(nx.getMinutes());
+  return `<td class="nxt" data-s="${r.s}" data-b="${r.b}" data-ts="${+nx}">`
+    + `<span class="cd">${fmtLeft(nx - Date.now())}</span> <span class="clock">${clock}</span>`
+    + (flippable ? `<button class="ph${pinned?' set':''}" data-phase="${r.s}" title="Runs every 2 hours on ${hours} GMT hours. The schedule doesn't say which — click to switch to ${pinned && spec.parity===1 ? 'even' : 'odd'}.">~</button>` : '')
+    + `</td>`;
+}
+function tickNext(){
+  const now = Date.now();
+  let stale = false;
+  document.querySelectorAll('#tbody td.nxt[data-ts]').forEach(td=>{
+    const ts = +td.dataset.ts;
+    if(now >= ts){ stale = true; return; }
+    const cd = td.querySelector('.cd');
+    if(cd) cd.textContent = fmtLeft(ts - now);
+  });
+  if(stale) render();                       // a slot just went green — recompute
+}
+function sortRows(rs){
+  const {k,dir} = state.sort;
+  const key = r => {
+    const s=DATA.series[r.s];
+    switch(k){
+      case 'cls': return [CLS_ORDER[s.c],s.t,s.n];
+      case 'lic': return [s.l,s.n];
+      case 'type': return [s.t,CLS_ORDER[s.c],s.n];
+      case 'ser': return [s.n];
+      case 'trk': return [DATA.tracks[r.t],s.n];
+      case 'car': return [DATA.cars[r.c[0]]||'zz',s.n];
+      case 'wk': return [r.w,s.n];
+      case 'len': return [parseInt(r.d)||0,s.n];
+      case 'next': { const nx = nextMap.get(r); return [nx ? +nx : 8e15, s.n]; }
+      default: return [s.n];
+    }
+  };
+  return rs.sort((a,b)=>{
+    const A=key(a),B=key(b);
+    for(let i=0;i<A.length;i++){ if(A[i]<B[i]) return -dir; if(A[i]>B[i]) return dir; }
+    return 0;
+  });
+}
+
+let nextMap = new Map();
+function render(){
+  const all = rowsOn(state.date);
+  const now = new Date();
+  nextMap = new Map();
+  all.forEach(r => nextMap.set(r, nextForRow(r, now)));
+  const shown = sortRows(all.filter(passes));
+  $('#statCan').textContent = all.filter(canRace).length;
+  $('#dateLabel').textContent = pretty(state.date);
+  const wi = weekStarts.findIndex(ws=>state.date>=ws && state.date<shift(ws,7));
+  $('#weekLabel').textContent = wi>=0 ? 'Week '+(wi+1) : 'off-season';
+  $('#dateIn').value = state.date;
+
+  $('#tbody').innerHTML = shown.map(r=>{
+    const s = DATA.series[r.s];
+    const ot=ownsTrack(r), oc=ownsCar(r);
+    return `<tr class="${ot&&oc?'can':''}">
+      <td><span class="badge b-${s.c}">${s.c}</span></td>
+      <td><span class="lic">${esc(s.l)}</span></td>
+      <td>${esc(s.t)}</td>
+      <td><button class="star ${state.favs.has(r.s)?'on':''}" data-fav="${r.s}" title="Favourite">★</button><button class="ser" data-ser="${r.s}" title="Season schedule for this series">${esc(seriesLabel(s.n))}</button>${s.f?'<span class="tag fx">FIXED</span>':''}${s.m?'<span class="tag tm">TEAM</span>':''}</td>
+      <td class="tk ${ot?'own':''}">${esc(DATA.tracks[r.t])}${r.y?`<br><span class="lay">${esc(r.y)}</span>`:''}</td>
+      <td class="cr cars ${oc?'own':''}">${carCell(r)}</td>
+      <td class="mono">${r.w} <span class="lay">${esc(r.a.slice(5))}</span></td>
+      <td class="mono">${esc(r.d)||'—'}</td>
+      ${nextCell(r)}
+      <td class="times">${esc(s.r)}</td>
+    </tr>`;
+  }).join('');
+  $('#empty').style.display = shown.length ? 'none':'block';
+  renderRibbon();
+}
+
+function wireShell(){
+  $('#tbody').onclick = e => {
+    const f = e.target.closest('[data-fav]');
+    if(f){
+      const i = +f.dataset.fav;
+      state.favs.has(i) ? state.favs.delete(i) : state.favs.add(i);
+      render(); save();
+      return;
+    }
+    const ph = e.target.closest('[data-phase]');
+    if(ph){
+      const si = +ph.dataset.phase, key = seriesKey(DATA.series[si].n);
+      state.phase[key] = (state.phase[key] === 1) ? 0 : 1;
+      specCache.delete(si);
+      render(); save();
+      return;
+    }
+    const b = e.target.closest('[data-ser]');
+    if(b) seriesModal(+b.dataset.ser);
+  };
+  document.querySelectorAll('th[data-k]').forEach(th=>{
+    th.onclick = () => {
+      const k = th.dataset.k;
+      state.sort = {k, dir: state.sort.k===k ? -state.sort.dir : 1};
+      document.querySelectorAll('th .car').forEach(x=>x.remove());
+      th.insertAdjacentHTML('beforeend',` <span class="car">${state.sort.dir>0?'▲':'▼'}</span>`);
+      render();
+    };
+  });
+
+  /* ---------- date nav ---------- */
+  $('#prevWk').onclick = ()=>setDate(shift(state.date,-7));
+  $('#nextWk').onclick = ()=>setDate(shift(state.date,7));
+  $('#prevDay').onclick = ()=>setDate(shift(state.date,-1));
+  $('#nextDay').onclick = ()=>setDate(shift(state.date,1));
+  $('#todayBtn').onclick = ()=>setDate(iso(new Date()));
+  $('#dateIn').onchange = e => e.target.value && setDate(e.target.value);
+  $('#btnReset').onclick = ()=>{
+    state.types=new Set(TYPES); state.classes=new Set(CLASSES);
+    state.open=state.fixed=true;
+    state.can=state.car=state.trk=state.near=state.fav=state.soon=false;
+    renderFilters(); render(); save();
+  };
+}
+wireShell();
+setInterval(tickNext, 1000);
+
+/* ---------- pickers ---------- */
+const PICKERS = {
+  cars:   {title:'My cars',   note:'Tick every car you own.'},
+  tracks: {title:'My tracks', note:'Tick the base track — every layout of it counts.'},
+  series: {title:'Favourite series',
+           note:'Favourites drive the purchase guide and the Favourites-only filter.'},
+};
+function picker(kind){
+  const cfg = PICKERS[kind];
+  const names = kind==='cars' ? DATA.cars : kind==='tracks' ? DATA.tracks
+              : DATA.series.map(s=>seriesKey(s.n));
+  const sel = kind==='cars' ? state.cars : kind==='tracks' ? state.tracks : state.favs;
+  const free = new Set(kind==='cars' ? DATA.freeCars : kind==='tracks' ? DATA.freeTracks : []);
+  const order = names.map((n,i)=>i).sort((a,b)=>names[a].localeCompare(names[b]));
+  const m = $('#modal');
+  const draw = (q='') => {
+    const ql = q.toLowerCase();
+    m.querySelector('.list').innerHTML = order.filter(i=>names[i].toLowerCase().includes(ql)).map(i=>
+      `<label class="li"><input type="checkbox" data-i="${i}" ${sel.has(i)?'checked':''}>
+        <span>${esc(names[i])}</span>${free.has(i)?'<span class="free">FREE</span>':''}</label>`).join('');
+    m.querySelector('.count').textContent = `${sel.size} of ${names.length} selected`;
+  };
+  m.innerHTML = `
+    <header><h3>${cfg.title}</h3><span class="count"></span></header>
+    <div class="tools">
+      <input type="search" placeholder="Search…" autocomplete="off">
+      ${free.size?'<button data-act="free">Free content only</button>':''}
+      <button data-act="all">Select all</button>
+      <button data-act="none">Clear all</button>
+    </div>
+    <div class="list"></div>
+    <footer><span class="note">${cfg.note}</span>
+      <button data-act="close">Done</button></footer>`;
+  draw();
+  m.querySelector('input[type=search]').oninput = e => draw(e.target.value);
+  m.querySelector('.list').onchange = e => {
+    const i = +e.target.dataset.i;
+    e.target.checked ? sel.add(i) : sel.delete(i);
+    m.querySelector('.count').textContent = `${sel.size} of ${names.length} selected`;
+    render(); save();
+  };
+  m.querySelector('.tools').onclick = e => {
+    const a = e.target.dataset.act; if(!a) return;
+    sel.clear();
+    if(a==='all') names.forEach((_,i)=>sel.add(i));
+    if(a==='free') free.forEach(i=>sel.add(i));
+    draw(m.querySelector('input[type=search]').value); render(); save();
+  };
+  m.querySelector('footer').onclick = e => { if(e.target.dataset.act==='close') closeModal(); };
+  $('#scrim').classList.add('open');
+}
+async function copyText(text, btn){
+  const said = m => { if(btn){ const was = btn.textContent; btn.textContent = m;
+                              setTimeout(()=>btn.textContent = was, 1800); } };
+  try{ await navigator.clipboard.writeText(text); said('Copied'); return true; }catch(e){}
+  try{
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    said(ok ? 'Copied' : 'Press Ctrl+C');
+    return ok;
+  }catch(e){ said('Press Ctrl+C'); return false; }
+}
+function seriesModal(si){
+  const s = DATA.series[si];
+  const rows = DATA.rows.filter(r=>r.s===si).sort((a,b)=>a.w-b.w);
+  const carSets = new Set(rows.map(r=>r.c.join(',')));
+  const varies = carSets.size > 1;
+  const allCars = [...new Set(rows.flatMap(r=>r.c))];
+  const m = $('#modal');
+  m.innerHTML = `
+    <header><h3 title="${esc(s.n)}">${esc(seriesKey(s.n))}</h3>
+      <span class="count">${esc(s.t)} · class ${esc(s.c)} · ${esc(s.l)}${s.f?' · fixed setup':''}</span></header>
+    <div class="sub">${varies ? 'Cars change from week to week — see the column.'
+      + (rows.some(ownsCar) ? '' : ' You do not own a car for any week here.') :
+      allCars.map(c=>`<span class="${state.cars.has(c)?'hit':''}">${esc(DATA.cars[c])}</span>`).join(', ')
+      + (allCars.some(c=>state.cars.has(c)) ? '' : ' <span class="lay">— none of these owned</span>')}
+      <span style="float:right">${esc(s.r)}</span></div>
+    <div class="list" style="display:block;padding:0">
+      <table class="mtable">
+        <thead><tr><th>Week</th><th>Track</th>${varies?'<th>Cars</th>':''}
+          <th>Starts</th><th>Ends</th><th>Length</th></tr></thead>
+        <tbody>${rows.map(r=>{
+          const now = r.a<=state.date && state.date<r.b;
+          const ot = state.tracks.has(r.t), oc = ownsCar(r);
+          return `<tr class="${ot&&oc?'can':''} ${now?'now':''}">
+            <td class="num">${r.w}</td>
+            <td class="${ot?'own':''}">${esc(DATA.tracks[r.t])}${r.y?` <span class="lay">${esc(r.y)}</span>`:''}</td>
+            ${varies?`<td class="uses ${oc?'own':''}">${r.c.map(c=>`<span class="${state.cars.has(c)?'hit':''}">${esc(DATA.cars[c])}</span>`).join(', ')||'—'}</td>`:''}
+            <td class="num">${r.a}</td><td class="num">${shift(r.b,-1)}</td>
+            <td class="num">${r.d||'—'}</td></tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>
+    <footer><span class="note">Green cells are content you own; a fully green row is a week you could race.
+      The bordered row is the week showing on ${state.date}.</span>
+      <button data-act="close">Close</button></footer>`;
+  m.querySelector('footer').onclick = e => { if(e.target.dataset.act==='close') closeModal(); };
+  $('#scrim').classList.add('open');
+}
+
+/* which unowned track unlocks the most racing, across the series you care about */
+function guideRows(scope){
+  const pool = scope==='fav' ? state.favs : new Set(DATA.series.map((_,i)=>i));
+  const byTrack = new Map();
+  DATA.rows.forEach(r=>{
+    if(!pool.has(r.s) || state.tracks.has(r.t)) return;
+    const e = byTrack.get(r.t) || {ready:[], needCar:[]};
+    (ownsCar(r) ? e.ready : e.needCar).push(r);
+    byTrack.set(r.t, e);
+  });
+  return [...byTrack.entries()].map(([t,e])=>({t, ...e}))
+    .sort((a,b)=> b.ready.length-a.ready.length || b.needCar.length-a.needCar.length
+                || DATA.tracks[a.t].localeCompare(DATA.tracks[b.t]));
+}
+
+let guideScope = 'fav';
+function purchaseModal(){
+  const m = $('#modal');
+  if(guideScope==='fav' && !state.favs.size) guideScope = 'all';
+  const draw = () => {
+    const today = iso(new Date());
+    const rows = guideRows(guideScope).filter(r=>r.ready.length || r.needCar.length);
+    const body = m.querySelector('.list');
+    if(guideScope==='fav' && !state.favs.size){
+      body.innerHTML = `<div class="empty"><b>No favourites yet</b>
+        Star a series in the table, or pick them under Favourites. The guide then ranks tracks by how much
+        racing each one unlocks across those series.</div>`;
+      return;
+    }
+    body.innerHTML = `<table class="mtable">
+      <thead><tr><th>Weeks</th><th>Track</th><th>Where it is used</th><th>Own it</th></tr></thead>
+      <tbody>${rows.slice(0,60).map(r=>{
+        /* weeks already raced still count, but they are not what you are buying */
+        const all = [...r.ready, ...r.needCar]
+          .map(x=>({x, past: x.b <= today}))
+          .sort((a,b)=> (a.past - b.past) || (a.x.w - b.x.w));      // still to come first
+        const uses = all.slice(0,6).map(({x,past})=>{
+          const nm = esc(seriesLabel(DATA.series[x.s].n));
+          const need = !ownsCar(x);
+          const cls = past ? 'gone' : (need ? 'nc' : '');
+          return `<div class="${cls}">${nm} <span class="wkn">W${x.w}</span>`
+               + (past ? '' : (need ? ' · car needed' : '')) + `</div>`;
+        }).join('');
+        const more = all.length - 6;
+        const left = r.ready.filter(x=>x.b > today).length;
+        return `<tr>
+          <td><span class="cnt ${r.ready.length?'':'zero'}">${r.ready.length}</span>
+            ${left !== r.ready.length
+               ? `<div class="uses ${left?'':'nc'}" style="margin-top:3px">${left?left+' still to come':'all raced'}</div>`
+               : ''}
+            ${r.needCar.length?`<div class="uses nc" style="margin-top:3px">+${r.needCar.length} need a car</div>`:''}</td>
+          <td><b>${esc(DATA.tracks[r.t])}</b></td>
+          <td class="uses">${uses}${more>0?`<div class="wkn">+${more} more</div>`:''}</td>
+          <td><input type="checkbox" data-buy="${r.t}" title="Mark as owned"></td>
+        </tr>`;
+      }).join('')}</tbody></table>`;
+  };
+  m.innerHTML = `
+    <header><h3>Purchase guide</h3><span class="count"></span></header>
+    <div class="tools">
+      <button data-scope="fav">My favourite series</button>
+      <button data-scope="all">Every series</button>
+      <button data-act="copy">Copy shopping list</button>
+      <a href="https://www.iracing.com/tracks/" target="_blank" rel="noopener"
+         style="align-self:center;font-size:12.5px">iRacing track catalogue ↗</a>
+    </div>
+    <div class="list" style="display:block;padding:0"></div>
+    <footer><span class="note">Ranked by weeks of racing each track unlocks. The count only includes weeks where you
+      already own an eligible car — tracks needing a car too are listed underneath.
+      Struck-through weeks have already been raced this season.</span>
+      <button data-act="close">Close</button></footer>`;
+  const label = () => m.querySelector('.count').textContent =
+    guideScope==='fav' ? `${state.favs.size} favourite series` : `all ${DATA.series.length} series`;
+  const mark = () => m.querySelectorAll('[data-scope]').forEach(b=>
+    b.style.borderColor = b.dataset.scope===guideScope ? 'var(--accent)' : '');
+  m.querySelector('.tools').onclick = e => {
+    if(e.target.dataset.scope){ guideScope = e.target.dataset.scope; draw(); label(); mark(); }
+    if(e.target.dataset.act==='copy'){
+      const txt = guideRows(guideScope).filter(r=>r.ready.length).slice(0,25)
+        .map(r=>`${r.ready.length}\t${DATA.tracks[r.t]}`).join('\n');
+      copyText('weeks\ttrack\n'+txt, e.target);
+    }
+  };
+  m.querySelector('.list').onchange = e => {
+    const t = e.target.dataset.buy;
+    if(t===undefined) return;
+    state.tracks.add(+t); render(); save(); draw(); label(); mark();
+  };
+  m.querySelector('footer').onclick = e => { if(e.target.dataset.act==='close') closeModal(); };
+  draw(); label(); mark();
+  $('#scrim').classList.add('open');
+}
+
+function backup(){
+  const m=$('#modal');
+  m.innerHTML = `
+    <header><h3>Backup, restore &amp; new season</h3><span class="count">build ${BUILD} \u00b7 ${backend===BACKENDS.none?'not saving':backend.label.toLowerCase()}</span></header>
+    <div class="tools"><button data-act="copy">Copy</button><button data-act="apply">Restore from box</button>
+      <label class="ldbtn">Load season…<input type="file" accept=".json,application/json" hidden></label></div>
+    <div class="list" style="display:block;padding:14px 18px"><textarea spellcheck="false"></textarea></div>
+    <footer><span class="note">Paste this text into the box on another machine and press Restore. To move to a new
+      iRacing season, run season_to_json.py on the new schedule PDF and load the JSON here — your cars and tracks
+      carry over by name.</span>
+      <button data-act="close">Done</button></footer>`;
+  const ta = m.querySelector('textarea');
+  ta.value = JSON.stringify(snapshot());
+  m.querySelector('.tools').onclick = e => {
+    if(e.target.dataset.act==='copy'){ ta.select(); copyText(ta.value, e.target); }
+    if(e.target.dataset.act==='apply'){
+      try{ restore(JSON.parse(ta.value)); renderFilters(); render(); save(); closeModal(); }
+      catch(err){ e.target.textContent='That is not valid backup text'; }
+    }
+  };
+  m.querySelector('input[type=file]').onchange = e => {
+    const f = e.target.files[0]; if(!f) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      try{
+        const next = JSON.parse(fr.result);
+        if(!Array.isArray(next.rows) || !Array.isArray(next.series) || !next.rows.length) throw 0;
+        const problem = loadSeason(next);
+        if(problem){ m.querySelector('.count').textContent = problem; return; }
+        closeModal();
+      }catch(err){ m.querySelector('.count').textContent = 'that file is not a planner season JSON'; }
+    };
+    fr.readAsText(f);
+  };
+  m.querySelector('footer').onclick = e => { if(e.target.dataset.act==='close') closeModal(); };
+  $('#scrim').classList.add('open');
+}
+/* only reachable in the data-less build, or if season.json is the only source and it is broken */
+function noSchedule(){
+  document.querySelectorAll('.warnbar').forEach(n=>n.remove());
+  $('.side').style.display='none';
+  $('.main').innerHTML = `
+    <div class="panel" style="padding:28px 30px;max-width:720px">
+      <h1 style="margin:0 0 10px">No schedule loaded</h1>
+      <p style="color:var(--ink-2);margin:0 0 16px">This build keeps the schedule in a separate file, so it
+        needs <b>season.json</b> sitting next to it.</p>
+      ${seasonProblem ? `<div class="warnbar" style="margin:0 0 16px">${esc(seasonProblem)}</div>` : ''}
+      <p style="color:var(--ink-2);margin:0 0 8px">Make one from the iRacing schedule PDF:</p>
+      <pre style="background:#f5f7f9;border:1px solid var(--line);border-radius:6px;padding:12px;
+                  font:12.5px/1.6 var(--mono);overflow:auto">pip install pdfplumber
+python season_to_json.py SeasonSchedule.pdf -o season.json
+python serve.py</pre>
+      <p style="color:var(--ink-3);font-size:12.5px">Reading this straight off disk? The page cannot see its
+        neighbours over file://, so either run serve.py or load the file by hand.</p>
+      <label class="ldbtn" style="display:inline-block">Load season.json…
+        <input type="file" accept=".json,application/json" hidden></label>
+      <p class="footnote" style="font-size:12px;color:var(--ink-3);margin:18px 0 0"></p>
+    </div>`;
+  $('.main').querySelector('.footnote').textContent = 'App build '+BUILD+'.';
+  $('.main').querySelector('input[type=file]').onchange = e => {
+    const f=e.target.files[0]; if(!f) return;
+    const fr=new FileReader();
+    fr.onload = () => {
+      try{
+        const next=JSON.parse(String(fr.result).replace(/^\uFEFF/,''));
+        if(!Array.isArray(next.rows) || !next.rows.length) throw new Error('no schedule in that file');
+        location.hash=''; seasonProblem='';
+        DATA=next; seasonLoaded=true; seasonSource='loaded by you';
+        initSeason();
+        $('.side').style.display='';
+        location.reload === undefined ? 0 : 0;
+        rebuildShell();
+      }catch(err){ alert('That file could not be used: '+err.message); }
+    };
+    fr.readAsText(f);
+  };
+}
+/* the data-less build blanks the main panel; put it back once a schedule arrives */
+function rebuildShell(){
+  $('.main').innerHTML = SHELL_HTML;
+  wireShell();
+  state.cars = new Set(DATA.freeCars); state.tracks = new Set(DATA.freeTracks);
+  if(window.__SAVED__) restore(window.__SAVED__);
+  state.types = new Set(TYPES);
+  const today = iso(new Date());
+  state.date = (today>=weekStarts[0] && today<=shift(weekStarts[weekStarts.length-1],6)) ? today : weekStarts[0];
+  renderFilters(); render(); flagSave(true); save();
+}
+function closeModal(){ $('#scrim').classList.remove('open'); }
+$('#scrim').onclick = e => { if(e.target.id==='scrim') closeModal(); };
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
+$('#btnCars').onclick = ()=>picker('cars');
+$('#btnTracks').onclick = ()=>picker('tracks');
+$('#btnFavs').onclick = ()=>picker('series');
+$('#btnBuy').onclick = purchaseModal;
+$('#btnBackup').onclick = backup;
+$('#btnSaveCopy').onclick = saveCopy;
+
+/* ---------- boot ---------- */
+(async function(){
+  await chooseBackend();
+  if(window.__SEASON__) seasonSource = 'saved into this file';
+  const folderSeason = await seasonFromFolder();
+  if(folderSeason){
+    const keep = DATA, keepSrc = seasonSource;
+    DATA = folderSeason; seasonLoaded = true; seasonSource = 'from season.json in this folder';
+    try{ initSeason(); if(!weekStarts.length) throw 0; }
+    catch(e){ DATA = keep; seasonLoaded = !!window.__SEASON__; seasonSource = keepSrc;
+              seasonProblem = 'season.json is in this folder but its dates are unreadable, '
+                + 'so the built-in schedule is being used instead.'; }
+  }
+  initSeason();
+  state.cars = new Set(DATA.freeCars);
+  state.tracks = new Set(DATA.freeTracks);
+  if(window.__SAVED__) restore(window.__SAVED__);
+  state.types = new Set(TYPES);
+  const hadSaved = await loadSaved();
+  /* opened an older saved copy under serve.py? adopt its picks into the folder straight away */
+  if(!hadSaved && window.__SAVED__ && backend !== BACKENDS.none) save();
+  initSeason();
+  const today = iso(new Date());
+  state.date = (today >= weekStarts[0] && today <= shift(weekStarts[weekStarts.length-1],6))
+    ? today : weekStarts[0];
+  if(!DATA || !DATA.rows || !DATA.rows.length){ return noSchedule(); }
+  renderFilters();
+  render();
+  flagSave(true);
+  /* an older saved copy may carry a stale banner in its markup — this page owns that message */
+  document.querySelectorAll('.warnbar').forEach(n=>n.remove());
+  if(seasonProblem){
+    const q=document.createElement('div');
+    q.className='warnbar';
+    q.textContent = seasonProblem;
+    $('.main').prepend(q);
+  }
+  if(backend === BACKENDS.none){
+    const p=document.createElement('div');
+    p.className='warnbar';
+    p.textContent = location.protocol === 'file:'
+      ? 'Opened straight from disk, so this page can\u2019t save on its own. Run serve.py from this folder '
+        + 'and use the http://127.0.0.1 link it prints \u2014 then every change saves to '
+        + 'planner-settings.json automatically. Until then, \u201cSave a copy\u201d writes your picks into the file.'
+      : 'serve.py is not answering at ' + location.host + ', so this page can\u2019t save on its own. '
+        + 'Start it in this folder, or use \u201cSave a copy\u201d to write your picks into the file.';
+    $('.main').prepend(p);
+  }
+})();
+</script>
+</body>
+</html>
