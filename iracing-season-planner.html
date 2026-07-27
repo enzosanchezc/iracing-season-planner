@@ -6,15 +6,68 @@
 <title>iRacing Season Planner</title>
 <style>
   :root{
+    color-scheme: light dark;
     --ink:#14161a; --ink-2:#3d434d; --ink-3:#767d88;
     --line:#dfe3e8; --line-2:#eceff2;
     --bg:#f2f4f6; --card:#ffffff;
     --own:#e2f3e6; --own-line:#7fc492; --own-ink:#1d6b34;
     --accent:#0e4f8f; --accent-soft:#e7f0f9;
     --warn:#b4531a;
+    --th-bg:#f7f9fa; --th-hover:#eef2f5;
+    --row-can:#f6fcf7; --row-hover:#eef4fa;
+    --seg-bg:#eef1f4;
+    --input-bg:#ffffff; --hover:#f3f6f9;
+    --lic-bg:#f0f2f5;
+    --free-bg:#eef7f0; --free-line:#cfe6d5; --free-ink:#5a8a68;
+    --tag-fx-bg:#fdf7e6; --tag-fx-line:#d6c39a; --tag-fx-ink:#8a6d24;
+    --tag-tm-bg:#eef5fc; --tag-tm-line:#a8c4e0; --tag-tm-ink:#2f6fc0;
+    --warnbar-bg:#fff6e6; --warnbar-line:#e6d3a8; --warnbar-ink:#7a5a12;
+    --scrim:rgba(16,19,23,.5);
     --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
   }
+  /* dark palette: applied when the OS prefers dark and the user hasn't pinned "light",
+     or whenever the user has explicitly pinned "dark" via the theme button */
+  @media(prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --ink:#e7e9ec; --ink-2:#c1c6cf; --ink-3:#8b93a1;
+      --line:#33383f; --line-2:#282c32;
+      --bg:#15171a; --card:#1c1f24;
+      --own:#173321; --own-line:#2f6b45; --own-ink:#5fd382;
+      --accent:#5b9fe3; --accent-soft:#1c2c3d;
+      --warn:#e0904a;
+      --th-bg:#20242a; --th-hover:#262b32;
+      --row-can:#15201a; --row-hover:#1e252d;
+      --seg-bg:#20242a;
+      --input-bg:#1c1f24; --hover:#242a31;
+      --lic-bg:#20242a;
+      --free-bg:#16281c; --free-line:#2c5236; --free-ink:#6fbd82;
+      --tag-fx-bg:#2c260f; --tag-fx-line:#5c4d20; --tag-fx-ink:#d8b662;
+      --tag-tm-bg:#152534; --tag-tm-line:#2c4c6e; --tag-tm-ink:#6fa8dd;
+      --warnbar-bg:#332812; --warnbar-line:#5c4a1e; --warnbar-ink:#e0b96a;
+      --scrim:rgba(0,0,0,.65);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#e7e9ec; --ink-2:#c1c6cf; --ink-3:#8b93a1;
+    --line:#33383f; --line-2:#282c32;
+    --bg:#15171a; --card:#1c1f24;
+    --own:#173321; --own-line:#2f6b45; --own-ink:#5fd382;
+    --accent:#5b9fe3; --accent-soft:#1c2c3d;
+    --warn:#e0904a;
+    --th-bg:#20242a; --th-hover:#262b32;
+    --row-can:#15201a; --row-hover:#1e252d;
+    --seg-bg:#20242a;
+    --input-bg:#1c1f24; --hover:#242a31;
+    --lic-bg:#20242a;
+    --free-bg:#16281c; --free-line:#2c5236; --free-ink:#6fbd82;
+    --tag-fx-bg:#2c260f; --tag-fx-line:#5c4d20; --tag-fx-ink:#d8b662;
+    --tag-tm-bg:#152534; --tag-tm-line:#2c4c6e; --tag-tm-ink:#6fa8dd;
+    --warnbar-bg:#332812; --warnbar-line:#5c4a1e; --warnbar-ink:#e0b96a;
+    --scrim:rgba(0,0,0,.65);
+  }
+  :root[data-theme="light"]{ color-scheme: light; }
+  :root[data-theme="dark"]{ color-scheme: dark; }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
   body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--sans);-webkit-font-smoothing:antialiased}
@@ -48,13 +101,13 @@
   h1 em{font-style:normal;color:var(--accent)}
   .wknum{margin-left:auto;font:600 15px/1 var(--mono);color:var(--ink-3)}
   .nav{display:flex;align-items:center;gap:6px;margin-top:10px;flex-wrap:wrap}
-  .nav button{background:#fff;border:1px solid var(--line);border-radius:5px;padding:5px 9px;cursor:pointer;font-size:13px}
-  .nav button:hover{border-color:#b9c1cb;background:#f8fafc}
-  .nav input[type=date]{border:1px solid var(--line);border-radius:5px;padding:5px 8px;font-size:13px}
+  .nav button{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:5px 9px;cursor:pointer;font-size:13px}
+  .nav button:hover{border-color:#b9c1cb;background:var(--hover)}
+  .nav input[type=date]{background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:5px 8px;font-size:13px}
 
   /* ---- season ribbon (signature) ---- */
   .ribbon{display:flex;gap:3px;margin-top:12px}
-  .seg{flex:1;background:#eef1f4;border:1px solid transparent;border-radius:4px;padding:5px 3px 4px;
+  .seg{flex:1;background:var(--seg-bg);border:1px solid transparent;border-radius:4px;padding:5px 3px 4px;
        cursor:pointer;text-align:center;position:relative;overflow:hidden}
   .seg:hover{border-color:#b9c1cb}
   .seg .wk{font:600 10px/1 var(--mono);color:var(--ink-3);position:relative}
@@ -72,7 +125,7 @@
   .opt{display:flex;align-items:center;gap:8px;padding:3px 0;cursor:pointer;font-size:13px;color:var(--ink-2)}
   .opt input{margin:0;accent-color:var(--accent);width:14px;height:14px}
   .opt .tally{margin-left:auto;font:11px/1 var(--mono);color:var(--ink-3)}
-  .side .reset{width:100%;margin-top:2px;background:#fff;border:1px solid var(--line);border-radius:5px;
+  .side .reset{width:100%;margin-top:2px;background:var(--card);color:var(--ink-2);border:1px solid var(--line);border-radius:5px;
                padding:7px;cursor:pointer;font-size:12.5px;color:var(--ink-2)}
   .side .reset:hover{border-color:#b9c1cb}
   .stat{padding:12px 14px;font-size:12.5px;color:var(--ink-3);border-bottom:1px solid var(--line-2)}
@@ -85,30 +138,30 @@
   .tablewrap{border-radius:8px}
   table{border-collapse:collapse;width:100%;min-width:820px;font-size:13px;
         border-radius:8px;overflow:hidden}
-  th{position:sticky;top:52px;z-index:10;background:#f7f9fa;text-align:left;font-weight:600;color:var(--ink-2);
+  th{position:sticky;top:52px;z-index:10;background:var(--th-bg);text-align:left;font-weight:600;color:var(--ink-2);
      padding:9px 10px;box-shadow:inset 0 -1px 0 var(--line);white-space:nowrap;font-size:12px;
      letter-spacing:.02em;cursor:pointer;user-select:none}
   thead::after{content:'';position:absolute}
-  th:hover{background:#eef2f5}
+  th:hover{background:var(--th-hover)}
   th .car{color:var(--ink-3);font-size:9px}
   td{padding:7px 10px;border-bottom:1px solid var(--line-2);vertical-align:top}
-  tr.can td{background:#f6fcf7}
-  tr:hover td{background:#eef4fa}
+  tr.can td{background:var(--row-can)}
+  tr:hover td{background:var(--row-hover)}
   td.tk.own,td.cr.own{background:var(--own);box-shadow:inset 2px 0 0 var(--own-line)}
   tr.can td.tk.own,tr.can td.cr.own{background:var(--own)}
   .badge{display:inline-block;min-width:19px;text-align:center;padding:2px 5px;border-radius:3px;
          font:700 11px/1.35 var(--mono);color:#fff}
   .b-R{background:#c0392b}.b-D{background:#e07000}.b-C{background:#e8c000;color:#3d2f00}
   .b-B{background:#28903f}.b-A{background:#2f6fc0}.b-P{background:#2b2f36}
-  .lic{font:600 11.5px/1.35 var(--mono);color:var(--ink-2);background:#f0f2f5;border:1px solid var(--line);
+  .lic{font:600 11.5px/1.35 var(--mono);color:var(--ink-2);background:var(--lic-bg);border:1px solid var(--line);
        padding:1px 5px;border-radius:3px;white-space:nowrap}
   .ser{font:550 13px/1.45 var(--sans);color:var(--ink);background:none;border:0;padding:0;text-align:left;
        cursor:pointer;border-bottom:1px dotted #b9c1cb}
   .ser:hover{color:var(--accent);border-bottom-color:var(--accent)}
   .tag{display:inline-block;font:600 9.5px/1.4 var(--mono);letter-spacing:.04em;padding:1px 4px;border-radius:3px;
        border:1px solid var(--line);color:var(--ink-3);margin-left:5px;vertical-align:1px}
-  .tag.fx{border-color:#d6c39a;color:#8a6d24;background:#fdf7e6}
-  .tag.tm{border-color:#a8c4e0;color:#2f6fc0;background:#eef5fc}
+  .tag.fx{border-color:var(--tag-fx-line);color:var(--tag-fx-ink);background:var(--tag-fx-bg)}
+  .tag.tm{border-color:var(--tag-tm-line);color:var(--tag-tm-ink);background:var(--tag-tm-bg)}
   .lay{color:var(--ink-3);font-size:12px}
   .mono{font-family:var(--mono);font-size:12px;color:var(--ink-2);white-space:nowrap}
   .times{color:var(--ink-3);font-size:12px}
@@ -127,26 +180,26 @@
   .empty b{display:block;color:var(--ink-2);font-size:15px;margin-bottom:4px}
 
   /* ---- modal ---- */
-  .scrim{position:fixed;inset:0;background:rgba(16,19,23,.5);display:none;z-index:60;padding:32px 16px}
+  .scrim{position:fixed;inset:0;background:var(--scrim);display:none;z-index:60;padding:32px 16px}
   .scrim.open{display:block}
-  .modal{background:#fff;max-width:860px;margin:0 auto;border-radius:10px;display:flex;flex-direction:column;
+  .modal{background:var(--card);color:var(--ink);max-width:860px;margin:0 auto;border-radius:10px;display:flex;flex-direction:column;
          max-height:calc(100vh - 64px);overflow:hidden}
   .modal header{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
   .modal header h3{margin:0;font-size:16px}
   .modal header .count{font:12px/1 var(--mono);color:var(--ink-3)}
   .modal .tools{padding:10px 18px;border-bottom:1px solid var(--line-2);display:flex;gap:8px;flex-wrap:wrap}
-  .modal .tools input{flex:1;min-width:170px;border:1px solid var(--line);border-radius:5px;padding:7px 10px;font-size:13px}
-  .modal .tools button{border:1px solid var(--line);background:#fff;border-radius:5px;padding:6px 10px;
+  .modal .tools input{flex:1;min-width:170px;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:7px 10px;font-size:13px}
+  .modal .tools button{border:1px solid var(--line);background:var(--card);border-radius:5px;padding:6px 10px;
                        font-size:12.5px;cursor:pointer;color:var(--ink-2)}
   .modal .tools button:hover{border-color:#b9c1cb}
   .list{overflow:auto;padding:8px 12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1px 10px}
   .li{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:4px;cursor:pointer;font-size:13px}
-  .li:hover{background:#f3f6f9}
+  .li:hover{background:var(--hover)}
   .li input{accent-color:var(--accent);margin:0;width:14px;height:14px}
-  .li .free{margin-left:auto;font:9.5px/1.4 var(--mono);color:#5a8a68;background:#eef7f0;border:1px solid #cfe6d5;
+  .li .free{margin-left:auto;font:9.5px/1.4 var(--mono);color:var(--free-ink);background:var(--free-bg);border:1px solid var(--free-line);
             padding:0 4px;border-radius:3px}
   .mtable{width:100%;border-collapse:collapse;font-size:13px}
-  .mtable th{position:static;background:#f7f9fa;font-size:11px;letter-spacing:.05em;text-transform:uppercase;
+  .mtable th{position:static;background:var(--th-bg);font-size:11px;letter-spacing:.05em;text-transform:uppercase;
              color:var(--ink-3);padding:7px 10px;border-bottom:1px solid var(--line);cursor:default}
   .mtable td{padding:7px 10px;border-bottom:1px solid var(--line-2);vertical-align:top}
   .mtable td.own{background:var(--own)}
@@ -156,7 +209,7 @@
   .mtable .num{font-family:var(--mono);font-size:12px;color:var(--ink-2);white-space:nowrap}
   .cnt{display:inline-block;min-width:22px;text-align:center;font:700 13px/1.5 var(--mono);
        background:var(--accent-soft);color:var(--accent);border-radius:4px;padding:0 6px}
-  .cnt.zero{background:#f0f2f5;color:var(--ink-3)}
+  .cnt.zero{background:var(--lic-bg);color:var(--ink-3)}
   .uses{font-size:12px;color:var(--ink-2)}
   .uses .wkn{color:var(--ink-3);font-family:var(--mono);font-size:11px}
   .uses .nc{color:var(--warn)}
@@ -167,11 +220,12 @@
   .modal footer .note{font-size:12px;color:var(--ink-3);flex:1}
   .modal footer button{padding:8px 16px;border-radius:5px;border:1px solid var(--accent);background:var(--accent);
                        color:#fff;cursor:pointer;font-size:13px}
-  textarea{width:100%;height:190px;font:11.5px/1.5 var(--mono);border:1px solid var(--line);border-radius:6px;padding:10px}
-  .ldbtn{border:1px solid var(--line);background:#fff;border-radius:5px;padding:6px 10px;font-size:12.5px;
+  textarea{width:100%;height:190px;font:11.5px/1.5 var(--mono);background:var(--input-bg);color:var(--ink);
+           border:1px solid var(--line);border-radius:6px;padding:10px}
+  .ldbtn{border:1px solid var(--line);background:var(--card);border-radius:5px;padding:6px 10px;font-size:12.5px;
           cursor:pointer;color:var(--ink-2)}
   .ldbtn:hover{border-color:#b9c1cb}
-  .warnbar{background:#fff6e6;border:1px solid #e6d3a8;color:#7a5a12;padding:8px 12px;border-radius:6px;
+  .warnbar{background:var(--warnbar-bg);border:1px solid var(--warnbar-line);color:var(--warnbar-ink);padding:8px 12px;border-radius:6px;
            font-size:12.5px;margin:0 0 12px}
   @media(max-width:1100px){
     .bar{position:static;height:auto;flex-wrap:wrap;padding:8px 12px;gap:8px}
@@ -182,6 +236,13 @@
     .side{position:static;width:100%;flex:none}
   }
 </style>
+<script>
+/* set the pinned theme before first paint, so there is no light-then-dark flash */
+try{
+  var t = localStorage.getItem('iracing-planner-theme');
+  if(t==='light' || t==='dark') document.documentElement.setAttribute('data-theme', t);
+}catch(e){}
+</script>
 </head>
 <body>
 
@@ -189,6 +250,7 @@
   <div class="brand">iRacing Season Planner <span>· schedule from season.json</span></div>
   <div class="spacer"></div>
   <span id="saveState" class="savestate"></span>
+  <button id="btnTheme" title="Theme: system">🖥️</button>
   <button id="btnCars">My cars</button>
   <button id="btnTracks">My tracks</button>
   <button id="btnFavs">Favourites</button>
@@ -289,12 +351,42 @@
 </div>
 
 <script>
-const BUILD = '2026-07-27.20';
+const BUILD = '2026-07-27.21';
 const EMBEDDED = {"built":"—","season":"no schedule loaded","cars":[],"tracks":[],"series":[],"rows":[],"freeCars":[],"freeTracks":[]};
 let DATA = window.__SEASON__ || EMBEDDED;
 const $ = s => document.querySelector(s);
 const ESC_MAP = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ESC_MAP[c]);
+
+/* ---------- theme: a 3-way switch — system (default) / light / dark ---------- */
+const THEME_KEY = 'iracing-planner-theme';
+const THEME_CYCLE = [null, 'light', 'dark'];           // null = follow the OS
+const THEME_ICON = {null:'🖥️', light:'☀️', dark:'🌙'};
+const THEME_NEXT_LABEL = {null:'light', light:'dark', dark:'system'};
+const themePref = () => { try{ const v = localStorage.getItem(THEME_KEY);
+  return (v==='light'||v==='dark') ? v : null; }catch(e){ return null; } };
+const setThemePref = v => { try{ v ? localStorage.setItem(THEME_KEY, v) : localStorage.removeItem(THEME_KEY); }catch(e){} };
+function paintTheme(){
+  const btn = $('#btnTheme'); if(!btn) return;
+  const p = themePref();
+  btn.textContent = THEME_ICON[p];
+  btn.title = 'Theme: ' + (p || 'system') + ' — click for ' + THEME_NEXT_LABEL[p];
+}
+function applyTheme(){
+  const p = themePref();
+  if(p) document.documentElement.setAttribute('data-theme', p);
+  else document.documentElement.removeAttribute('data-theme');
+  paintTheme();
+}
+$('#btnTheme').onclick = () => {
+  setThemePref(THEME_CYCLE[(THEME_CYCLE.indexOf(themePref())+1) % THEME_CYCLE.length]);
+  applyTheme();
+};
+try{
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if(!themePref()) paintTheme(); });
+}catch(e){}
+applyTheme();
+
 const SHELL_HTML = $('.main').innerHTML;
 const CLS_ORDER = {A:0,B:1,C:2,D:3,R:4,P:0};
 const CLASSES = ['A','B','C','D','R'];
@@ -1123,7 +1215,7 @@ function noSchedule(){
         needs <b>season.json</b> sitting next to it.</p>
       ${seasonProblem ? `<div class="warnbar" style="margin:0 0 16px">${esc(seasonProblem)}</div>` : ''}
       <p style="color:var(--ink-2);margin:0 0 8px">Make one from the iRacing schedule PDF:</p>
-      <pre style="background:#f5f7f9;border:1px solid var(--line);border-radius:6px;padding:12px;
+      <pre style="background:var(--th-bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:12px;
                   font:12.5px/1.6 var(--mono);overflow:auto">pip install pdfplumber
 python season_to_json.py SeasonSchedule.pdf -o season.json
 python serve.py</pre>
